@@ -3,6 +3,7 @@ package com.cdrussell.image;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -72,8 +73,6 @@ public class ImageSorter
 
         List<File> imagesSuccessfullyProcessed = copyImagesToOutput(inputImageDirectory, outputImageDirectory);
 
-        System.out.println("Copied all files");
-
         if (configuration.shouldDeleteOriginals())
         {
             System.out.println("Will delete originals");
@@ -128,38 +127,69 @@ public class ImageSorter
 
     private static String getDateTakenStringFromFile(File image) throws ImageProcessingException, IOException
     {
-        System.out.println("\nProcessing file: " + image.getName());
+        System.out.println("Processing file: " + image.getName());
         Date dateTaken = getDateTaken(image);
-        return dateFormatter.format(dateTaken);
+        String dateString = dateFormatter.format(dateTaken);
+        System.out.println("Using date: " + dateString);
+        return dateString;
     }
 
     private static Date getDateTaken(File image)
     {
-        Date dateTaken;
-        if (image.getName().endsWith(".png"))
-        {
-            return new Date(image.lastModified());
-        }
-
-        Metadata meta;
         try
         {
-            meta = ImageMetadataReader.readMetadata(image);
-            ExifSubIFDDirectory directory = meta.getDirectory(ExifSubIFDDirectory.class);
-            if (directory == null)
+            return getDateTakenFromExif(image);
+        }
+        catch (ImageProcessingException e)
+        {
+            try
             {
+                return getDateTakenFromFilename(image);
+            }
+            catch (ParseException e1)
+            {
+                System.out.println("Could not meaningfully interpret filename: " + e1.getMessage());
                 return new Date(image.lastModified());
             }
-            dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
-            if (dateTaken == null)
-            {
-                dateTaken = new Date(image.lastModified());
-            }
-            return dateTaken;
         }
-        catch (ImageProcessingException | IOException e)
+        catch (IOException e)
         {
+            System.out.println("Could not meaningfully extract date : " + e.getMessage());
             return new Date(image.lastModified());
         }
     }
+    
+    private static Date getDateTakenFromFilename(File image) throws ParseException
+    {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Date d = sdf.parse(getNameWithoutPrefix(image));
+        return d;
+    }
+    
+    private static String getNameWithoutPrefix(File file)
+    {
+        String filename = file.getName();
+        if(!filename.contains("."))
+            return filename;
+        
+        return filename.substring(0, filename.lastIndexOf('.'));
+    }
+    
+    private static Date getDateTakenFromExif(File image) throws ImageProcessingException, IOException
+    {
+        Date dateTaken;
+        Metadata  meta = ImageMetadataReader.readMetadata(image);
+        ExifSubIFDDirectory directory = meta.getDirectory(ExifSubIFDDirectory.class);
+        if (directory == null)
+        {
+            throw new ImageProcessingException("Could not get date from exif");
+        }
+        dateTaken = directory.getDate(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL);
+        if (dateTaken == null)
+        {
+            throw new ImageProcessingException("Could not get date from exif");
+        }
+        return dateTaken;
+    }
+    
 }

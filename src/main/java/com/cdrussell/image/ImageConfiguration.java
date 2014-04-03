@@ -8,7 +8,7 @@ import java.util.Properties;
 
 public class ImageConfiguration
 {
-    private static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
+    private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
     
     private static final String CONFIG_FILENAME = "config.properties"; 
     
