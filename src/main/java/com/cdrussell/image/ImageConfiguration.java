@@ -14,7 +14,6 @@ public class ImageConfiguration
     
     private static final String PROPERTY_INPUT_DIRECTORY = "inputDirectory";
     private static final String PROPERTY_OUTPUT_DIRECTORY = "outputDirectory";
-    private static final String PROPERTY_CREATE_OUTPUT_AUTOMATICALLY = "createOutputDir";
     private static final String PROPERTY_DELETE_ORIGINALS = "deleteOriginals";
     private static final String PROPERTY_DATE_FORMAT = "dateFormat";
     
@@ -38,12 +37,6 @@ public class ImageConfiguration
     {
         String property = properties.getProperty(PROPERTY_OUTPUT_DIRECTORY);
         return new File(property);
-    }
-
-    public boolean shouldCreateOutput()
-    {
-        String property = properties.getProperty(PROPERTY_CREATE_OUTPUT_AUTOMATICALLY, "false");
-        return Boolean.parseBoolean(property);
     }
     
     public boolean shouldDeleteOriginals()

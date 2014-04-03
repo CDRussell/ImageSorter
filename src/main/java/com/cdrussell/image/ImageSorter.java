@@ -22,14 +22,9 @@ public class ImageSorter
 
     public enum Error
     {
-        NO_PARAMETERS(1), INVALID_INPUT_DIRECTORY(2), INVALID_OUTPUT_DIRECTORY(3);
-
-        private int value;
-
-        private Error(int value)
-        {
-            this.value = value;
-        }
+        NO_PARAMETERS,
+        INVALID_INPUT_DIRECTORY,
+        INVALID_OUTPUT_DIRECTORY;
     }
 
     private static final String[] IMAGE_EXTENSIONS = new String[] { "gif", "png", "bmp", "jpg", "jpeg", "mp4", "3gp" };
