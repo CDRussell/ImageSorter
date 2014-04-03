@@ -17,13 +17,10 @@ import com.drew.metadata.exif.ExifSubIFDDirectory;
 
 public class ImageSorter
 {
-    private static final SimpleDateFormat dateFormatter = new SimpleDateFormat("YYYY-MM-dd");
-
-    private static final String INVALID_PARAMETERS_ERROR_MESSAGE = " You must supply the input directory as parameter 1, and the output directory as parameter 2";
-
+    private static SimpleDateFormat dateFormatter;
     private static ImageConfiguration configuration;
 
-    private enum Error
+    public enum Error
     {
         NO_PARAMETERS(1), INVALID_INPUT_DIRECTORY(2), INVALID_OUTPUT_DIRECTORY(3);
 
@@ -35,7 +32,7 @@ public class ImageSorter
         }
     }
 
-    private static final String[] IMAGE_EXTENSIONS = new String[] { "gif", "png", "bmp", "jpg", "jpeg", "mp4", "3gp"};
+    private static final String[] IMAGE_EXTENSIONS = new String[] { "gif", "png", "bmp", "jpg", "jpeg", "mp4", "3gp" };
     private static FilenameFilter IMAGE_FILTER = new FilenameFilter()
     {
         @Override
@@ -54,7 +51,12 @@ public class ImageSorter
     };
 
     /**
-     * @param args
+     * Copies images and videos from the input directory to output directory. 
+     * The output directory is split into sub-directories based on the date taken of the images/videos.
+     * If EXIF data exists, that will be used. Otherwise the last modified timestamp will be used.
+     * 
+     * Loads the configuration from the config.properties which should be in the root of the project.
+     * @param args Not used
      * @throws IOException
      * @throws ImageProcessingException
      */
@@ -63,20 +65,27 @@ public class ImageSorter
         configuration = new ImageConfiguration();
         configuration.loadProperties();
 
+        dateFormatter = new SimpleDateFormat(configuration.getDateFormat());
+        
         File inputImageDirectory = configuration.getInputDirectory();
         File outputImageDirectory = configuration.getOutputDirectory();
-        boolean createOutputDirectoryAutomatically = configuration.shouldCreateOutput();
 
-        ensureValidInputDirectory(inputImageDirectory);
-        ensureValidOutputDirectory(outputImageDirectory, createOutputDirectoryAutomatically);
+        DirectoryValidator.ensureValidInputDirectory(inputImageDirectory);
+        DirectoryValidator.ensureValidOutputDirectory(outputImageDirectory);
 
         System.out.println("Processing directory: " + inputImageDirectory.getAbsolutePath());
 
         List<File> imagesSuccessfullyProcessed = copyImagesToOutput(inputImageDirectory, outputImageDirectory);
 
-        System.out.println("Moved all files; will remove originals");
+        System.out.println("Copied all files");
 
-        deleteOriginals(imagesSuccessfullyProcessed);
+        if (configuration.shouldDeleteOriginals())
+        {
+            System.out.println("Will delete originals");
+            deleteFiles(imagesSuccessfullyProcessed);
+        }
+        
+        System.out.println("Copied " + imagesSuccessfullyProcessed.size() + " files");
     }
 
     private static List<File> copyImagesToOutput(File inputImageDirectory, File outputImageDirectory)
@@ -91,12 +100,13 @@ public class ImageSorter
                 File finalDirectory = new File(outputImageDirectory.getAbsoluteFile() + "/" + formattedDate);
                 System.out.println("\nOutput directory is " + finalDirectory.getAbsolutePath());
 
-                assert (isValidDirectory(finalDirectory, true));
+                assert (DirectoryValidator.isValidDirectory(finalDirectory, true));
 
                 FileUtils.copyFile(image, new File(finalDirectory, image.getName()));
 
                 imagesSuccessfullyProcessed.add(image);
-            } catch (ImageProcessingException | IOException e)
+            }
+            catch (ImageProcessingException | IOException e)
             {
                 System.err.println("\nFailed to process file " + image.getAbsolutePath());
             }
@@ -104,28 +114,11 @@ public class ImageSorter
         return imagesSuccessfullyProcessed;
     }
 
-    private static void ensureValidOutputDirectory(File outputImageDirectory, boolean createOutputDirIfNeeded)
-    {
-        boolean needsWrite = true;
-        if (!isValidDirectory(outputImageDirectory, needsWrite))
-        {
-            System.err.println("ERROR: " + Error.INVALID_OUTPUT_DIRECTORY + INVALID_PARAMETERS_ERROR_MESSAGE);
-            System.exit(Error.INVALID_INPUT_DIRECTORY.ordinal());
-            return;
-        }
-    }
-
-    private static void ensureValidInputDirectory(File inputImageDirectory)
-    {
-        if (!isValidDirectory(inputImageDirectory, false))
-        {
-            System.err.println("ERROR: " + Error.INVALID_INPUT_DIRECTORY + INVALID_PARAMETERS_ERROR_MESSAGE);
-            System.exit(Error.INVALID_INPUT_DIRECTORY.ordinal());
-            return;
-        }
-    }
-
-    private static void deleteOriginals(List<File> files)
+    /**
+     * Deletes the given list of Files
+     * @param files The list of files to be deleted.
+     */
+    private static void deleteFiles(List<File> files)
     {
         System.out.println("There are " + files.size() + " images to be deleted");
         if (files.size() == 0)
@@ -136,41 +129,6 @@ public class ImageSorter
             System.out.println("Deleting " + file.getAbsolutePath());
             FileUtils.deleteQuietly(file);
         }
-    }
-
-    private static boolean isValidDirectory(File directory, boolean needsWrite)
-    {
-        if (directory == null)
-        {
-            System.out.println("Null directories not permitted");
-            return false;
-        }
-
-        if (!directory.exists())
-        {
-            System.out.println("Directory does not exist: " + directory.getAbsolutePath());
-            return false;
-        }
-
-        if (!directory.isDirectory())
-        {
-            System.out.println("Not a directory: " + directory.getAbsolutePath());
-            return false;
-        }
-
-        if (!directory.canRead())
-        {
-            System.out.println("Not readable: " + directory.getAbsolutePath());
-            return false;
-        }
-
-        if (needsWrite && !directory.canWrite())
-        {
-            System.out.println("Not writable: " + directory.getAbsolutePath());
-            return false;
-        }
-
-        return true;
     }
 
     private static String getDateTakenStringFromFile(File image) throws ImageProcessingException, IOException
@@ -187,7 +145,7 @@ public class ImageSorter
         {
             return new Date(image.lastModified());
         }
-        
+
         Metadata meta;
         try
         {
@@ -203,10 +161,10 @@ public class ImageSorter
                 dateTaken = new Date(image.lastModified());
             }
             return dateTaken;
-        } 
+        }
         catch (ImageProcessingException | IOException e)
         {
-           return new Date(image.lastModified());
+            return new Date(image.lastModified());
         }
     }
 }

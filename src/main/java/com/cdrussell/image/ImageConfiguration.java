@@ -8,10 +8,17 @@ import java.util.Properties;
 
 public class ImageConfiguration
 {
+    private static final String DEFAULT_DATE_FORMAT = "YYYY-MM-dd";
+    
     private static final String CONFIG_FILENAME = "config.properties"; 
+    
     private static final String PROPERTY_INPUT_DIRECTORY = "inputDirectory";
     private static final String PROPERTY_OUTPUT_DIRECTORY = "outputDirectory";
     private static final String PROPERTY_CREATE_OUTPUT_AUTOMATICALLY = "createOutputDir";
+    private static final String PROPERTY_DELETE_ORIGINALS = "deleteOriginals";
+    private static final String PROPERTY_DATE_FORMAT = "dateFormat";
+    
+    public static final String INVALID_PARAMETERS_ERROR_MESSAGE = " You must supply the input directory as parameter 1, and the output directory as parameter 2";
     
     private final Properties properties = new Properties();
     
@@ -37,5 +44,16 @@ public class ImageConfiguration
     {
         String property = properties.getProperty(PROPERTY_CREATE_OUTPUT_AUTOMATICALLY, "false");
         return Boolean.parseBoolean(property);
+    }
+    
+    public boolean shouldDeleteOriginals()
+    {
+        String property = properties.getProperty(PROPERTY_DELETE_ORIGINALS, "false");
+        return Boolean.parseBoolean(property);
+    }
+    
+    public String getDateFormat()
+    {
+        return properties.getProperty(PROPERTY_DATE_FORMAT, DEFAULT_DATE_FORMAT);
     }
 }
